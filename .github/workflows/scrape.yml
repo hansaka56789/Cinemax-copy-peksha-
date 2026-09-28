@@ -1,34 +1,31 @@
-name: Run Cinemaxpeksha API Live🔥
+name: Scrape CinemaxLKpeksha🔥
 
 on:
-  workflow_dispatch: # manually Run කරනකොට
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  run-api:
+  scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 360 # පැය 6yi
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          
-      - name: Install dependencies
+          python-version: '3.12'
+
+      - run: pip install -r requirements.txt
+
+      - run: python main.py
+
+      - name: Commit data
         run: |
-          pip install -r requirements.txt
-          pip install cloudflared || true
-          
-      - name: Install cloudflared
-        run: |
-          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared-linux-amd64.deb
-          
-      - name: Run API with Public Link
-        run: |
-          echo "Starting API..."
-          uvicorn main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
-          echo "Creating public link..."
-          cloudflared tunnel --url http://localhost:8000
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet || git commit -m "chore: update scraped data [skip ci]"
+          git push
